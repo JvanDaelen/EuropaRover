@@ -46,16 +46,24 @@ class EvalueNetwork(nn.Module):
             nn.ReLU()
         )
 
+        self.direction_net = nn.Sequential(
+            nn.Linear(6, 4),
+            nn.ReLU()
+        )
+
     def forward(self, obs: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
         """
         TODO
         """
         grid = obs['grid']
+        direction_tensor = torch.from_numpy(obs['direction'])
         grid = grid.reshape((3, 3, 1))
         grid = torch.from_numpy(grid)
         grid = grid.permute(2, 0, 1)
         evalue_net_output = self.evalue_net(grid.float())
-        return evalue_net_output
+        direction_net_input = torch.cat([evalue_net_output, direction_tensor])
+        direction_net_output = self.direction_net(direction_net_input)
+        return direction_net_output
 
 
 class Trainer():
@@ -74,8 +82,8 @@ class Trainer():
 
         self.env = Centered3x3Environment()
         self.net = EvalueNetwork()
-        self.optimizer = torch.optim.AdamW(self.net.parameters(), lr=self.learning_rate)
-        # self.optimizer = torch.optim.SGD(self.net.parameters(), lr=self.learning_rate)
+        # self.optimizer = torch.optim.AdamW(self.net.parameters(), lr=self.learning_rate)
+        self.optimizer = torch.optim.SGD(self.net.parameters(), lr=self.learning_rate)
     
     def train(self, max_eps, epsilon = 0):
         self.rewards = []
@@ -86,6 +94,8 @@ class Trainer():
         self.colors = []
 
         for ep in range(max_eps):
+            if ep > 50e+3:
+                epsilon = 0
             obs, _ = self.env.reset()
             action_tensor = self.net.forward(obs)
             gamma = np.random.random()
@@ -141,8 +151,8 @@ def take_action():
 
 def test_training():
     trainer = Trainer()
-    max_eps = 5000
-    epsilon = 0.00
+    max_eps = 200000
+    epsilon = 0.01
     trainer.train(max_eps, epsilon)
     plt.figure(figsize=(6,6), layout="constrained")
     plt.subplot(311)
@@ -164,7 +174,7 @@ def test_training():
     plt.scatter(trainer.ep_nrs, trainer.actions, 2, c=trainer.colors)
     plt.xlabel('Episode')
     # plt.show()
-    plt.savefig(save_file_path(f'results/centered3x3_greedy_{str(epsilon).replace('.','_')}_not_sqrd_extr_layer_standard_loss_rewards_1E_1_5RE_AdamW_long', f'training_loss', 'png'))
+    plt.savefig(save_file_path(f'results/LocalTraining/centered_directional_3x3_greedy_{str(epsilon).replace('.','_')}_standard_loss_rewards_1E_1_5RE_0_2D_SGD_long_dyn_epsilon', f'training_loss', 'png'))
 
 if __name__ == '__main__':
     for i in range(5):

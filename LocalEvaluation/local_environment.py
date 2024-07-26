@@ -9,6 +9,7 @@ import numpy as np
 import gymnasium as gym
 from gymnasium import spaces
 import matplotlib.pyplot as plt
+import torch
 
 
 class Centered3x3Environment(gym.Env):
@@ -32,9 +33,10 @@ class Centered3x3Environment(gym.Env):
     CURRENT = 4
 
     #Rewards
-    REACH_END_REWARD = 1.5
-    EXISTS_REWARD = 1
-    DIED_REWARD = -1
+    REACH_END_REWARD = 2
+    EXISTS_REWARD = 0.5
+    DIED_REWARD = -3
+    DIRECTION_REWARD = 0.5
 
     def __init__(self) -> None:
         super().__init__()
@@ -46,7 +48,8 @@ class Centered3x3Environment(gym.Env):
         self.action_space = spaces.Discrete(self.n_actions)
         self.observation_space = gym.spaces.Dict(
             spaces={
-                "grid": gym.spaces.Box(low=0, high=4, shape=self.grid_size, dtype=np.int32)
+                "grid": gym.spaces.Box(low=0, high=4, shape=self.grid_size, dtype=np.int32),
+                "direction": gym.spaces.Box(low=-1, high=1, shape=(2,), dtype=np.float32)
             })
     
     def generate_terrain(self) -> None:
@@ -63,8 +66,28 @@ class Centered3x3Environment(gym.Env):
                     epsilon = np.random.random()
                     if epsilon < 0.4:
                         self.terrain[x, y] = self.OBJECT
-                        if epsilon < 0.05 and not target_assigned:
+                        if epsilon < 0.1 and not target_assigned:
                             self.terrain[x, y] = self.TARGET 
+                            direction_x = x
+                            direction_y = y
+        
+        if all([
+            self.terrain[1, 0] == self.OBJECT,
+            self.terrain[0, 1] == self.OBJECT,
+            self.terrain[2, 1] == self.OBJECT,
+            self.terrain[1, 2] == self.OBJECT
+        ]):
+            self.generate_terrain()
+
+        if not target_assigned:
+            direction_x = np.random.randint(-10, 11)
+            direction_y = np.random.randint(-10, 11)
+        direction = np.array([direction_x, direction_y], dtype=np.float32)
+        norm = np.linalg.norm(direction)
+        if norm == 0:
+            self.direction = direction
+        else:
+            self.direction = direction / np.linalg.norm(direction)
 
     def step(self, action):
         #Get direction from action
@@ -91,6 +114,15 @@ class Centered3x3Environment(gym.Env):
 
         self.terrain[1 + step[1], 1 + step[0]] = self.CURRENT
         self.terrain[1, 1] = self.PASSED
+
+        # Check if in right direction
+        dot = np.dot(step, self.direction)
+        if self.direction[0] * self.direction[1] < 0:
+            dot = -dot
+        if dot > 0:
+            reward += self.DIRECTION_REWARD
+        else:
+            reward -= self.DIRECTION_REWARD * 1.1
         
         done = True
         return  self._get_obs(), reward, done, {}, {}
@@ -112,7 +144,7 @@ class Centered3x3Environment(gym.Env):
         
     def _get_obs(self) -> dict:
             #return observation in the format of self.observation_space
-            return {"grid": self.terrain}
+            return {"grid": self.terrain, "direction": self.direction}
    
 def test_manual():
     import matplotlib.animation as animation
@@ -133,7 +165,17 @@ def test_manual():
                         ha="center", va="center")
     plt.show()
 
+def test_direction():
+    for _ in range(10):
+        env = Centered3x3Environment()
+        obs = env._get_obs()
+        print(f"{obs['direction'] = }")
+        step = np.random.randint(0, 4)
+        env.step(np.random.randint(0, 4))
+        print(step, env.dot)
+
 if __name__ == "__main__":
     # np.random.seed(42)
     # main()
     test_manual()
+    # test_direction()
