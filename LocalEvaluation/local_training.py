@@ -125,14 +125,14 @@ class Trainer():
 def test_net():
     env = Centered3x3Environment()
     net = EvalueNetwork()
-    print(f"{env._get_obs()['grid'] = }")
-    obs = env._get_obs()
+    print(f"{env.get_obs()['grid'] = }")
+    obs = env.get_obs()
     print(f"{net.forward(obs) = }")
 
 def take_action():
     env = Centered3x3Environment()
     net = EvalueNetwork()
-    obs = env._get_obs()
+    obs = env.get_obs()
     action_tensor = net.forward(obs)
     action = int(torch.argmax(action_tensor))
     old_q = action_tensor[action]
