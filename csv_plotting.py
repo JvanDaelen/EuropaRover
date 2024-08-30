@@ -5,6 +5,7 @@ import matplotlib.colors as mcolors
 
 # Select the desired configurations here. (between 91 and 108)
 ids = [92, 93, 108]
+interactive = True
 
 if len(ids) == 1:
     save_name = f'results/csvplots/id-{ids[0]}.png'
@@ -87,8 +88,10 @@ if len(ids) == 1:
     plt.grid(visible=True)
     plt.xlim(0, 20e+3)
     plt.ylim(0, 100)
-    # plt.show()
-    plt.savefig(save_name)
+    if interactive:
+        plt.show()
+    else:
+        plt.savefig(save_name)
 
 else:
     for id in ids:
@@ -209,5 +212,7 @@ else:
     plt.grid(visible=True)
     plt.xlim(0, 20e+3)
     plt.ylim(0, 100)
-    # plt.show()
-    plt.savefig(save_name)
+    if interactive:
+        plt.show()
+    else:
+        plt.savefig(save_name)
