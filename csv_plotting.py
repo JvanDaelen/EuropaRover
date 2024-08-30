@@ -3,7 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
 
-
+# Select the desired configurations here. (between 91 and 108)
 ids = [92, 93, 108]
 
 if len(ids) == 1:
